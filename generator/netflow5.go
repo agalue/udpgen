@@ -85,7 +85,7 @@ func (gen *Netflow5) startWorker(ctx context.Context, stats *Stats) {
 		return
 	}
 	ticker := time.NewTicker(gen.config.TickDuration())
-	data, err := gen.Build(8)
+	data, err := gen.build(8)
 	if err != nil {
 		log.Fatalf("Cannot build: %v", err)
 		return
@@ -103,7 +103,7 @@ func (gen *Netflow5) startWorker(ctx context.Context, stats *Stats) {
 	}
 }
 
-func (n *Netflow5) Build(recordCount int) ([]byte, error) {
+func (n *Netflow5) build(recordCount int) ([]byte, error) {
 	if n.startTime == 0 {
 		n.startTime = time.Now().UnixNano()
 	}
