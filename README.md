@@ -14,10 +14,18 @@ It currently supports packet generation via UDP for:
 
 ## Building
 
+### Local
+
 Make sure to have Go version [1.16.x](https://golang.org/dl/) installed on your system.
 
 ```bash=
 go install
+```
+
+### Docker
+
+```bash=
+docker build -t agalue/udp .
 ```
 
 ## Usage
@@ -28,6 +36,12 @@ Generate 100000 Syslog messages per second targeted at 172.23.1.1:514.
 
 ```bash=
 udpgen -r 100000 -h 172.23.1.1 -p 514
+```
+
+Or via Docker:
+
+```bash=
+docker run -it --rm agalue/udpgen -r 100000 -h 172.23.1.1 -p 514
 ```
 
 ### Generate SNMP Traps
@@ -45,3 +59,8 @@ Generate 200000 Netflow 5 flows per second targeted at 192.168.0.1:8877.
 ```sh
 udpgen -x netflow5 -r 200000 -h 192.168.0.1 -p 8877
 ```
+
+### TODO
+
+* Make the Syslog messages and SNMP Trap content dynamic.
+* Implement Netflow 9.
