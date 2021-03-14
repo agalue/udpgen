@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"log/syslog"
-	"sync"
 	"time"
 )
 
@@ -25,17 +24,7 @@ func (gen *Syslog) Init(cfg *Config) {
 }
 
 func (gen *Syslog) Start(ctx context.Context) {
-	stats := new(Stats)
-	go stats.Start(ctx)
-	wg := new(sync.WaitGroup)
-	wg.Add(gen.config.Workers)
-	for i := 0; i < gen.config.Workers; i++ {
-		go func() {
-			defer wg.Done()
-			gen.startWorker(ctx, stats)
-		}()
-	}
-	wg.Wait()
+	gen.config.StartWorkers(ctx, gen.startWorker)
 }
 
 func (gen *Syslog) startWorker(ctx context.Context, stats *Stats) {

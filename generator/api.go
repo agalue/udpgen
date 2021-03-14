@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -14,6 +15,8 @@ type UDPGenerator interface {
 	Init(cfg *Config)
 	Start(ctx context.Context)
 }
+
+type Run func(tx context.Context, stats *Stats)
 
 type Config struct {
 	Host             string
@@ -33,6 +36,20 @@ func (cfg *Config) UDPConn() (*net.UDPConn, error) {
 		return nil, err
 	}
 	return net.DialUDP("udp", nil, udpAddr)
+}
+
+func (cfg *Config) StartWorkers(ctx context.Context, run Run) {
+	stats := new(Stats)
+	go stats.Start(ctx)
+	wg := new(sync.WaitGroup)
+	wg.Add(cfg.Workers)
+	for i := 0; i < cfg.Workers; i++ {
+		go func() {
+			defer wg.Done()
+			run(ctx, stats)
+		}()
+	}
+	wg.Wait()
 }
 
 type Stats struct {

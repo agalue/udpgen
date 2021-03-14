@@ -3,7 +3,6 @@ package generator
 import (
 	"context"
 	"log"
-	"sync"
 	"time"
 )
 
@@ -24,17 +23,7 @@ func (gen *Netflow9) PacketDescription() string {
 
 func (gen *Netflow9) Start(ctx context.Context) {
 	log.Printf("Not implemented yet; coming soon")
-	stats := new(Stats)
-	go stats.Start(ctx)
-	wg := new(sync.WaitGroup)
-	wg.Add(gen.config.Workers)
-	for i := 0; i < gen.config.Workers; i++ {
-		go func() {
-			defer wg.Done()
-			gen.startWorker(ctx, stats)
-		}()
-	}
-	wg.Wait()
+	gen.config.StartWorkers(ctx, gen.startWorker)
 }
 
 func (gen *Netflow9) startWorker(ctx context.Context, stats *Stats) {

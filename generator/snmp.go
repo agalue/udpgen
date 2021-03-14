@@ -3,7 +3,6 @@ package generator
 import (
 	"context"
 	"log"
-	"sync"
 	"time"
 
 	"github.com/gosnmp/gosnmp"
@@ -27,17 +26,7 @@ func (gen *Trap) Init(cfg *Config) {
 }
 
 func (gen *Trap) Start(ctx context.Context) {
-	stats := new(Stats)
-	go stats.Start(ctx)
-	wg := new(sync.WaitGroup)
-	for i := 0; i < gen.config.Workers; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			gen.startWorker(ctx, stats)
-		}()
-	}
-	wg.Wait()
+	gen.config.StartWorkers(ctx, gen.startWorker)
 }
 
 func (gen *Trap) startWorker(ctx context.Context, stats *Stats) {
