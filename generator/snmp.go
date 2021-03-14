@@ -2,7 +2,6 @@ package generator
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/gosnmp/gosnmp"
@@ -37,6 +36,8 @@ func (gen *Trap) Start(ctx context.Context) error {
 	if err := session.Connect(); err != nil {
 		return err
 	}
+	stats := new(Stats)
+	go stats.Start(ctx)
 	trap := gen.buildSnmpTrap()
 	ticker := time.NewTicker(time.Duration(1000000000 / gen.config.PacketsPerSecond))
 	for {
@@ -46,9 +47,8 @@ func (gen *Trap) Start(ctx context.Context) error {
 			session.Conn.Close()
 			return nil
 		case <-ticker.C:
-			if _, err := session.SendTrap(trap); err != nil {
-				log.Printf("Cannot send trap: %v", err)
-			}
+			session.SendTrap(trap)
+			stats.Inc()
 		}
 	}
 }

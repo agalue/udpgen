@@ -82,6 +82,8 @@ func (gen *Netflow5) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	stats := new(Stats)
+	go stats.Start(ctx)
 	ticker := time.NewTicker(time.Duration(1000000000 / gen.config.PacketsPerSecond))
 	for {
 		select {
@@ -91,6 +93,7 @@ func (gen *Netflow5) Start(ctx context.Context) error {
 			return nil
 		case <-ticker.C:
 			conn.Write(data)
+			stats.Inc()
 		}
 	}
 }

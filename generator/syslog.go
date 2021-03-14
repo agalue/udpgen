@@ -28,6 +28,8 @@ func (gen *Syslog) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	stats := new(Stats)
+	go stats.Start(ctx)
 	ticker := time.NewTicker(time.Duration(1000000000 / gen.config.PacketsPerSecond))
 	for {
 		select {
@@ -37,6 +39,7 @@ func (gen *Syslog) Start(ctx context.Context) error {
 			return nil
 		case <-ticker.C:
 			slog.Info("%%SEC-6-IPACCESSLOGP: list in110 denied tcp 10.99.99.1(63923) -> 10.98.98.1(1521), 1 packet")
+			stats.Inc()
 		}
 	}
 }

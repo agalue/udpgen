@@ -3,7 +3,10 @@ package generator
 import (
 	"context"
 	"fmt"
+	"log"
 	"net"
+	"sync/atomic"
+	"time"
 )
 
 type UDPGenerator interface {
@@ -25,4 +28,24 @@ func (cfg *Config) UDPConn() (*net.UDPConn, error) {
 		return nil, err
 	}
 	return net.DialUDP("udp", nil, udpAddr)
+}
+
+type Stats struct {
+	Packets int64
+}
+
+func (s *Stats) Start(ctx context.Context) {
+	ticker := time.NewTicker(10 * time.Second)
+	for {
+		select {
+		case <-ctx.Done():
+			ticker.Stop()
+		case <-ticker.C:
+			log.Printf("Sent %d packets", s.Packets)
+		}
+	}
+}
+
+func (s *Stats) Inc() {
+	atomic.AddInt64(&s.Packets, 1)
 }
