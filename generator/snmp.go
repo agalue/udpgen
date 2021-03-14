@@ -2,6 +2,8 @@ package generator
 
 import (
 	"context"
+	"log"
+	"sync"
 	"time"
 
 	"github.com/gosnmp/gosnmp"
@@ -24,21 +26,34 @@ func (gen *Trap) Init(cfg *Config) {
 	gen.startTime = time.Now()
 }
 
-func (gen *Trap) Start(ctx context.Context) error {
-	session := gen.createSession(ctx)
-	if err := session.Connect(); err != nil {
-		return err
-	}
+func (gen *Trap) Start(ctx context.Context) {
 	stats := new(Stats)
 	go stats.Start(ctx)
+	wg := new(sync.WaitGroup)
+	for i := 0; i < gen.config.Workers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			gen.startWorker(ctx, stats)
+		}()
+	}
+	wg.Wait()
+}
+
+func (gen *Trap) startWorker(ctx context.Context, stats *Stats) {
+	session := gen.createSession(ctx)
+	if err := session.Connect(); err != nil {
+		log.Fatalf("Cannot create SNMP session: %v", err)
+		return
+	}
 	trap := gen.buildSnmpTrap()
-	ticker := time.NewTicker(time.Duration(1000000000 / gen.config.PacketsPerSecond))
+	ticker := time.NewTicker(gen.config.TickDuration())
 	for {
 		select {
 		case <-ctx.Done():
 			ticker.Stop()
 			session.Conn.Close()
-			return nil
+			return
 		case <-ticker.C:
 			session.SendTrap(trap)
 			stats.Inc()

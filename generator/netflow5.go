@@ -5,7 +5,9 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"log"
 	"math/rand"
+	"sync"
 	"time"
 )
 
@@ -73,24 +75,38 @@ func (gen *Netflow5) Init(cfg *Config) {
 	}
 }
 
-func (gen *Netflow5) Start(ctx context.Context) error {
-	conn, err := gen.config.UDPConn()
-	if err != nil {
-		return err
-	}
-	data, err := gen.Build(8)
-	if err != nil {
-		return err
-	}
+func (gen *Netflow5) Start(ctx context.Context) {
 	stats := new(Stats)
 	go stats.Start(ctx)
-	ticker := time.NewTicker(time.Duration(1000000000 / gen.config.PacketsPerSecond))
+	wg := new(sync.WaitGroup)
+	wg.Add(gen.config.Workers)
+	for i := 0; i < gen.config.Workers; i++ {
+		go func() {
+			defer wg.Done()
+			gen.startWorker(ctx, stats)
+		}()
+	}
+	wg.Wait()
+}
+
+func (gen *Netflow5) startWorker(ctx context.Context, stats *Stats) {
+	conn, err := gen.config.UDPConn()
+	if err != nil {
+		log.Fatalf("Cannot connect: %v", err)
+		return
+	}
+	ticker := time.NewTicker(gen.config.TickDuration())
+	data, err := gen.Build(8)
+	if err != nil {
+		log.Fatalf("Cannot build: %v", err)
+		return
+	}
 	for {
 		select {
 		case <-ctx.Done():
 			ticker.Stop()
 			conn.Close()
-			return nil
+			return
 		case <-ticker.C:
 			conn.Write(data)
 			stats.Inc()

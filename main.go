@@ -19,6 +19,7 @@ func main() {
 	flag.StringVar(&cfg.Host, "h", "127.0.0.1", "Target host / IP address")
 	flag.IntVar(&cfg.Port, "p", 0, "Target port (default depends on mode)")
 	flag.IntVar(&cfg.PacketsPerSecond, "r", 10000, "Number of packets per second to generate")
+	flag.IntVar(&cfg.Workers, "w", 1, "Number of workers (concurrent go-routines)")
 	flag.Parse()
 
 	if cfg.PacketsPerSecond <= 0 {
@@ -54,9 +55,7 @@ func main() {
 	}
 
 	udpgen.Init(cfg)
-	log.Printf("Sending %s to %s:%d at target rate of %d packets per seconds.", udpgen.PacketDescription(), cfg.Host, cfg.Port, cfg.PacketsPerSecond)
-	if err := udpgen.Start(ctx); err != nil {
-		log.Fatalf("Cannot start %s generator: %v", payload, err)
-	}
+	log.Printf("Sending %s to %s:%d at target rate of %d packets per seconds across %d worker(s).", udpgen.PacketDescription(), cfg.Host, cfg.Port, cfg.PacketsPerSecond, cfg.Workers)
+	udpgen.Start(ctx)
 	log.Println("Good bye!")
 }

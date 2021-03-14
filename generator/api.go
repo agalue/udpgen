@@ -12,13 +12,18 @@ import (
 type UDPGenerator interface {
 	PacketDescription() string
 	Init(cfg *Config)
-	Start(ctx context.Context) error
+	Start(ctx context.Context)
 }
 
 type Config struct {
 	Host             string
 	Port             int
+	Workers          int
 	PacketsPerSecond int
+}
+
+func (cfg *Config) TickDuration() time.Duration {
+	return time.Duration((cfg.Workers * 1000000000) / cfg.PacketsPerSecond)
 }
 
 func (cfg *Config) UDPConn() (*net.UDPConn, error) {
