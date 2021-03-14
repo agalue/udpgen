@@ -25,14 +25,7 @@ func (gen *Trap) Init(cfg *Config) {
 }
 
 func (gen *Trap) Start(ctx context.Context) error {
-	session := &gosnmp.GoSNMP{
-		Target:    gen.config.Host,
-		Port:      uint16(gen.config.Port),
-		Version:   gosnmp.Version1,
-		Context:   ctx,
-		Community: "public",
-		Timeout:   2 * time.Second,
-	}
+	session := gen.createSession(ctx)
 	if err := session.Connect(); err != nil {
 		return err
 	}
@@ -50,6 +43,17 @@ func (gen *Trap) Start(ctx context.Context) error {
 			session.SendTrap(trap)
 			stats.Inc()
 		}
+	}
+}
+
+func (gen *Trap) createSession(ctx context.Context) gosnmp.GoSNMP {
+	return gosnmp.GoSNMP{
+		Target:    gen.config.Host,
+		Port:      uint16(gen.config.Port),
+		Version:   gosnmp.Version1,
+		Context:   ctx,
+		Community: "public",
+		Timeout:   2 * time.Second,
 	}
 }
 
