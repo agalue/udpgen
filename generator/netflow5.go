@@ -68,6 +68,7 @@ func (gen *Netflow5) PacketDescription() string {
 }
 
 func (gen *Netflow5) Init(cfg *Config) {
+	gen.startTime = time.Now().UnixNano()
 	gen.config = cfg
 	if gen.config.Port == 0 {
 		gen.config.Port = 8877
@@ -103,12 +104,9 @@ func (gen *Netflow5) startWorker(ctx context.Context, stats *Stats) {
 	}
 }
 
-func (n *Netflow5) build(recordCount int) ([]byte, error) {
-	if n.startTime == 0 {
-		n.startTime = time.Now().UnixNano()
-	}
+func (gen *Netflow5) build(recordCount int) ([]byte, error) {
 	buffer := new(bytes.Buffer)
-	data := n.generate(recordCount)
+	data := gen.createPacket(recordCount)
 	err := binary.Write(buffer, binary.BigEndian, &data.Header)
 	if err != nil {
 		return nil, fmt.Errorf("Writing netflow header failed: %v", err)
@@ -122,40 +120,40 @@ func (n *Netflow5) build(recordCount int) ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
-func (n *Netflow5) generate(recordCount int) Netflow5Packet {
+func (gen *Netflow5) createPacket(recordCount int) Netflow5Packet {
 	records := []Netflow5Payload{}
 	for i := 0; i < recordCount; i++ {
-		records = append(records, n.createPayload())
+		records = append(records, gen.createPayload())
 	}
 	return Netflow5Packet{
-		Header:  n.createHeader(recordCount),
+		Header:  gen.createHeader(recordCount),
 		Records: records,
 	}
 }
 
-func (n *Netflow5) createHeader(recordCount int) Netflow5Header {
+func (gen *Netflow5) createHeader(recordCount int) Netflow5Header {
 	t := time.Now().UnixNano()
 	sec := t / SECOND
 	nsec := t - sec*SECOND
-	n.upTime = uint32((t-n.startTime)/int64(time.Millisecond)) + 1000
-	n.flowSequence++
+	gen.upTime = uint32((t-gen.startTime)/int64(time.Millisecond)) + 1000
+	gen.flowSequence++
 	return Netflow5Header{
 		Version:        5,
 		FlowCount:      uint16(recordCount),
-		SysUptime:      n.upTime,
+		SysUptime:      gen.upTime,
 		UnixSec:        uint32(sec),
 		UnixMsec:       uint32(nsec),
-		FlowSequence:   n.flowSequence,
+		FlowSequence:   gen.flowSequence,
 		EngineType:     1,
 		EngineId:       0,
 		SampleInterval: 0,
 	}
 }
 
-func (n *Netflow5) createPayload() Netflow5Payload {
-	uptime := int(n.upTime)
-	uptimeEnd := uint32(uptime - n.randomNum(10, 500))
-	uptimeStart := uptimeEnd - uint32(n.randomNum(10, 500))
+func (gen *Netflow5) createPayload() Netflow5Payload {
+	uptime := int(gen.upTime)
+	uptimeEnd := uint32(uptime - gen.randomNum(10, 500))
+	uptimeStart := uptimeEnd - uint32(gen.randomNum(10, 500))
 	return Netflow5Payload{
 		SrcIP:          rand.Uint32(),
 		DstIP:          rand.Uint32(),
@@ -177,6 +175,6 @@ func (n *Netflow5) createPayload() Netflow5Payload {
 	}
 }
 
-func (n *Netflow5) randomNum(min, max int) int {
+func (gen *Netflow5) randomNum(min, max int) int {
 	return rand.Intn(max-min) + min
 }
