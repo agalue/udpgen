@@ -86,7 +86,7 @@ func (gen *Netflow5) startWorker(ctx context.Context, stats *Stats) {
 		return
 	}
 	ticker := time.NewTicker(gen.config.TickDuration())
-	data, err := gen.build(8)
+	packet, err := gen.buildNetflow5Packet(8)
 	if err != nil {
 		log.Fatalf("Cannot build: %v", err)
 		return
@@ -98,13 +98,13 @@ func (gen *Netflow5) startWorker(ctx context.Context, stats *Stats) {
 			conn.Close()
 			return
 		case <-ticker.C:
-			conn.Write(data)
+			conn.Write(packet)
 			stats.Inc()
 		}
 	}
 }
 
-func (gen *Netflow5) build(recordCount int) ([]byte, error) {
+func (gen *Netflow5) buildNetflow5Packet(recordCount int) ([]byte, error) {
 	buffer := new(bytes.Buffer)
 	data := gen.createPacket(recordCount)
 	err := binary.Write(buffer, binary.BigEndian, &data.Header)

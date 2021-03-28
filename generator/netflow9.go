@@ -22,7 +22,7 @@ func (gen *Netflow9) PacketDescription() string {
 }
 
 func (gen *Netflow9) Start(ctx context.Context) {
-	log.Printf("Not implemented yet; coming soon")
+	log.Printf("Not implemented yet; coming soon") // FIXME
 	gen.config.StartWorkers(ctx, gen.startWorker)
 }
 
@@ -33,7 +33,11 @@ func (gen *Netflow9) startWorker(ctx context.Context, stats *Stats) {
 		return
 	}
 	ticker := time.NewTicker(gen.config.TickDuration())
-	packet := gen.buildNetflow9Packet()
+	packet, err := gen.buildNetflow9Packet()
+	if err != nil {
+		log.Fatalf("Cannot build: %v", err)
+		return
+	}
 	for {
 		select {
 		case <-ctx.Done():
@@ -47,6 +51,6 @@ func (gen *Netflow9) startWorker(ctx context.Context, stats *Stats) {
 	}
 }
 
-func (gen *Netflow9) buildNetflow9Packet() []byte {
-	return []byte{} // FIXME
+func (gen *Netflow9) buildNetflow9Packet() ([]byte, error) {
+	return []byte{}, nil // FIXME
 }
