@@ -4,7 +4,7 @@
 
 An application inspired by the C++ version of the [udpgen](https://github.com/OpenNMS/udpgen) tool written in [Go](https://golang.org/) to help the execution of stress tests against the OpenNMS, generating large volumes of traffic.
 
-Unlike its C++ sibling, this one can be compiled and executed on any operating system; however, it might not be as fast as the original version.
+Unlike its C++ sibling, this one can be compiled and executed on any operating system except for Windows due to Syslog compatibility; however, it might not be as fast as the original version.
 
 It currently supports packet generation via UDP for:
 * SNMP Traps
