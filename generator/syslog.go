@@ -29,9 +29,9 @@ func (gen *Syslog) Start(ctx context.Context) {
 
 func (gen *Syslog) startWorker(ctx context.Context, stats *Stats) {
 	addr := fmt.Sprintf("%s:%d", gen.config.Host, gen.config.Port)
-	slog, err := syslog.Dial("udp", addr, syslog.LOG_LOCAL7, "udpgen")
+	slog, err := syslog.Dial("udp", addr, syslog.Priority(gen.config.SyslogFacility), "udpgen")
 	if err != nil {
-		log.Fatalf("Cannot connect: %v", err)
+		log.Printf("Cannot connect: %v", err)
 		return
 	}
 	ticker := time.NewTicker(gen.config.TickDuration())
@@ -42,7 +42,7 @@ func (gen *Syslog) startWorker(ctx context.Context, stats *Stats) {
 			slog.Close()
 			return
 		case <-ticker.C:
-			slog.Info("%%SEC-6-IPACCESSLOGP: list in110 denied tcp 10.99.99.1(63923) -> 10.98.98.1(1521), 1 packet")
+			slog.Info(gen.config.SyslogMessage)
 			stats.Inc()
 		}
 	}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -18,11 +19,38 @@ type UDPGenerator interface {
 
 type Run func(tx context.Context, stats *Stats)
 
+type PropertiesFlag []string
+
+func (p *PropertiesFlag) String() string {
+	return strings.Join(*p, ", ")
+}
+
+func (p *PropertiesFlag) Set(value string) error {
+	*p = append(*p, value)
+	return nil
+}
+
 type Config struct {
 	Host             string
 	Port             int
 	Workers          int
 	PacketsPerSecond int
+
+	// SNMP Trap Parameters
+	TrapVersion  string
+	TrapSource   string
+	TrapID       string // Trap ID for v2c, or Enterprise for v1
+	TrapGeneric  int    // For v1
+	TrapSpecific int    // For v1
+	TrapVarbinds PropertiesFlag
+
+	// Syslog Parameters
+	SyslogFacility int
+	SyslogMessage  string
+}
+
+func (cfg *Config) IsSnmpV2c() bool {
+	return cfg.TrapVersion == "v2c"
 }
 
 func (cfg *Config) TickDuration() time.Duration {
