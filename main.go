@@ -28,10 +28,10 @@ func main() {
 	flag.StringVar(&cfg.TrapID, "trap-id", ".1.3.6.1.1.6.3.1.1.5", "SNMPv1 Trap Enterprise or SNMPv2c Trap ID")
 	flag.IntVar(&cfg.TrapSpecific, "trap-specific", 1, "SNMPv1 Trap Specific")
 	flag.IntVar(&cfg.TrapGeneric, "trap-generic", 6, "SNMPv1 Trap Generic")
-	flag.Var(&cfg.TrapVarbinds, "trap-varbind", "An SNMP trap varbind (can be used multiple times)\nfor instance: .1.3.6.1.6.3.1.1.5.1::ABC (octet-string assume)")
+	flag.Var(&cfg.TrapVarbinds, "trap-varbind", "An SNMP trap varbind (can be used multiple times)\nExample: '.1.3.6.1.6.3.1.1.5.1::ABC [rand_n:1000]' (type would be octect-string")
 
 	flag.IntVar(&cfg.SyslogFacility, "syslog-facility", int(syslog.LOG_LOCAL7), "Syslog Facility, from /usr/include/sys/syslog.h")
-	flag.StringVar(&cfg.SyslogMessage, "syslog-message", "%%SEC-6-IPACCESSLOGP: list in110 denied tcp 10.99.99.1(63923) -> 10.98.98.1(1521), 1 packet", "Syslog Message")
+	flag.StringVar(&cfg.SyslogMessage, "syslog-message", "%%SEC-6-IPACCESSLOGP: list in[rand_n:150] denied tcp [rand_ipv4]([rand_n:65536]) -> [rand_ipv4]([rand_n:65536]), 1 packet", "Template for the Syslog Message\n")
 
 	flag.Parse()
 
@@ -39,7 +39,7 @@ func main() {
 		log.Fatalln("Packet rate cannot be zero.")
 	}
 	if cfg.TrapVarbinds == nil {
-		cfg.TrapVarbinds = append(cfg.TrapVarbinds, ".1.3.6.1.6.3.1.1.5.1::ABC")
+		cfg.TrapVarbinds = append(cfg.TrapVarbinds, ".1.3.6.1.6.3.1.1.5.1::ABC [rand_n:1000]")
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
