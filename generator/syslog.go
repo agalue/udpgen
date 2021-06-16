@@ -42,7 +42,7 @@ func (gen *Syslog) startWorker(ctx context.Context, stats *Stats) {
 			slog.Close()
 			return
 		case <-ticker.C:
-			slog.Info(gen.config.SyslogMessage)
+			slog.Info(parseText(gen.config.SyslogMessage))
 			stats.Inc()
 		}
 	}
