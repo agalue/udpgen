@@ -2,6 +2,8 @@ package generator
 
 import (
 	"context"
+	_ "crypto/md5"
+	_ "crypto/sha1"
 	"log"
 	"net"
 	"strings"
@@ -28,7 +30,7 @@ func (gen *Trap) Init(cfg *Config) {
 }
 
 func (gen *Trap) Start(ctx context.Context) {
-	if gen.config.IsSnmpV2c() {
+	if !gen.config.IsSnmpV1() {
 		log.Printf("Please remember to set use-address-from-varbind=true on trapd-configuration.xml")
 	}
 	gen.config.StartWorkers(ctx, gen.startWorker)
@@ -49,12 +51,35 @@ func (gen *Trap) startWorker(ctx context.Context, stats *Stats) {
 			session.Conn.Close()
 			return
 		case <-ticker.C:
-			if _, err := session.SendTrap(trap); err != nil {
+			if _, err := session.SendTrap(trap); err == nil {
+				stats.Inc()
+			} else {
 				log.Printf("Cannot send trap: %v", err)
 				return
 			}
-			stats.Inc()
 		}
+	}
+}
+
+func (gen *Trap) getVersion() gosnmp.SnmpVersion {
+	switch gen.config.TrapVersion {
+	case "v2c":
+		return gosnmp.Version2c
+	case "v3":
+		return gosnmp.Version3
+	default:
+		return gosnmp.Version1
+	}
+}
+
+func (gen *Trap) getSecurityParameters() *gosnmp.UsmSecurityParameters {
+	return &gosnmp.UsmSecurityParameters{
+		UserName:                 gen.config.TrapUser,
+		AuthoritativeEngineID:    gen.config.TrapEngineID,
+		AuthenticationProtocol:   gosnmp.MD5,
+		AuthenticationPassphrase: gen.config.TrapAuthPassphrase,
+		PrivacyProtocol:          gosnmp.DES,
+		PrivacyPassphrase:        gen.config.TrapPrivPassphrase,
 	}
 }
 
@@ -63,18 +88,21 @@ func (gen *Trap) createSession(ctx context.Context) gosnmp.GoSNMP {
 	if addrs, err := net.LookupIP(gen.config.Host); err == nil {
 		target = addrs[0].String()
 	}
-	version := gosnmp.Version1
-	if gen.config.IsSnmpV2c() {
-		version = gosnmp.Version2c
+	snmp := gosnmp.GoSNMP{
+		Target:  target,
+		Port:    uint16(gen.config.Port),
+		Version: gen.getVersion(),
+		Context: ctx,
+		Timeout: 2 * time.Second,
 	}
-	return gosnmp.GoSNMP{
-		Target:    target,
-		Port:      uint16(gen.config.Port),
-		Version:   version,
-		Context:   ctx,
-		Community: "public",
-		Timeout:   2 * time.Second,
+	if snmp.Version == gosnmp.Version3 {
+		snmp.MsgFlags = gosnmp.AuthPriv
+		snmp.SecurityModel = gosnmp.UserSecurityModel
+		snmp.SecurityParameters = gen.getSecurityParameters()
+	} else {
+		snmp.Community = "public"
 	}
+	return snmp
 }
 
 func (gen *Trap) buildSnmpTrap() gosnmp.SnmpTrap {
@@ -83,7 +111,15 @@ func (gen *Trap) buildSnmpTrap() gosnmp.SnmpTrap {
 		source = addrs[0].String()
 	}
 	var trap gosnmp.SnmpTrap
-	if gen.config.IsSnmpV2c() {
+	if gen.config.IsSnmpV1() {
+		trap = gosnmp.SnmpTrap{
+			Enterprise:   gen.config.TrapID,
+			AgentAddress: source,
+			GenericTrap:  gen.config.TrapGeneric,
+			SpecificTrap: gen.config.TrapSpecific,
+			Timestamp:    uint(time.Since(gen.startTime).Seconds()),
+		}
+	} else {
 		trap = gosnmp.SnmpTrap{
 			Variables: []gosnmp.SnmpPDU{
 				{
@@ -100,14 +136,6 @@ func (gen *Trap) buildSnmpTrap() gosnmp.SnmpTrap {
 					Value: source,
 				},
 			},
-		}
-	} else {
-		trap = gosnmp.SnmpTrap{
-			Enterprise:   gen.config.TrapID,
-			AgentAddress: source,
-			GenericTrap:  gen.config.TrapGeneric,
-			SpecificTrap: gen.config.TrapSpecific,
-			Timestamp:    uint(time.Since(gen.startTime).Seconds()),
 		}
 	}
 	if gen.config.TrapVarbinds != nil {

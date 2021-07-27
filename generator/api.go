@@ -37,11 +37,16 @@ type Config struct {
 	PacketsPerSecond int
 
 	// SNMP Trap Parameters
-	TrapVersion  string
-	TrapSource   string
-	TrapID       string // Trap ID for v2c, or Enterprise for v1
-	TrapGeneric  int    // For v1
-	TrapSpecific int    // For v1
+	TrapVersion        string
+	TrapSource         string
+	TrapID             string // Trap ID for v2c/v3, or Enterprise for v1
+	TrapGeneric        int    // For v1
+	TrapSpecific       int    // For v1
+	TrapEngineID       string // For v3
+	TrapUser           string // For v3
+	TrapAuthPassphrase string // For v3
+	TrapPrivPassphrase string // For v3
+
 	TrapVarbinds PropertiesFlag
 
 	// Syslog Parameters
@@ -49,8 +54,8 @@ type Config struct {
 	SyslogMessage  string
 }
 
-func (cfg *Config) IsSnmpV2c() bool {
-	return cfg.TrapVersion == "v2c"
+func (cfg *Config) IsSnmpV1() bool {
+	return cfg.TrapVersion == "v1"
 }
 
 func (cfg *Config) TickDuration() time.Duration {

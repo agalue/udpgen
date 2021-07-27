@@ -23,12 +23,17 @@ func main() {
 	flag.IntVar(&cfg.PacketsPerSecond, "r", 10000, "Number of packets per second to generate")
 	flag.IntVar(&cfg.Workers, "w", 1, "Number of workers (concurrent go-routines)")
 
-	flag.StringVar(&cfg.TrapVersion, "trap-version", "v1", "SNMP Trap Version: v1 or v2c")
+	flag.StringVar(&cfg.TrapVersion, "trap-version", "v1", "SNMP Trap Version: v1, v2c, v3")
 	flag.StringVar(&cfg.TrapSource, "trap-host", "127.0.0.1", "IP Address or Hostname of the Trap Sender")
-	flag.StringVar(&cfg.TrapID, "trap-id", ".1.3.6.1.1.6.3.1.1.5", "SNMPv1 Trap Enterprise or SNMPv2c Trap ID")
+	flag.StringVar(&cfg.TrapID, "trap-id", ".1.3.6.1.1.6.3.1.1.5", "SNMPv1 Trap Enterprise or SNMPv2c/v3 Trap ID")
+	flag.StringVar(&cfg.TrapUser, "trap-user", "onms", "SNMPv3 Username")
+	flag.StringVar(&cfg.TrapEngineID, "trap-engine-id", "123456789", "SNMPv3 Authoritative Engine ID")
+	flag.StringVar(&cfg.TrapAuthPassphrase, "trap-auth-passphrase", "0p3nNM5rules", "SNMPv3 Authentication Passphrase (assuming MD5 for the protocol)")
+	flag.StringVar(&cfg.TrapPrivPassphrase, "trap-priv-passphrase", "0p3nNM5rules", "SNMPv3 Privacy Passphrase (assuming DES for the protocol)")
+
 	flag.IntVar(&cfg.TrapSpecific, "trap-specific", 1, "SNMPv1 Trap Specific")
 	flag.IntVar(&cfg.TrapGeneric, "trap-generic", 6, "SNMPv1 Trap Generic")
-	flag.Var(&cfg.TrapVarbinds, "trap-varbind", "An SNMP trap varbind (can be used multiple times)\nfor instance: .1.3.6.1.6.3.1.1.5.1::ABC (octet-string assume)")
+	flag.Var(&cfg.TrapVarbinds, "trap-varbind", "An SNMP trap varbind (can be used multiple times)\nfor instance: .1.3.6.1.6.3.1.1.5.1::ABC (assuming octet-string as the value type)")
 
 	flag.IntVar(&cfg.SyslogFacility, "syslog-facility", int(syslog.LOG_LOCAL7), "Syslog Facility, from /usr/include/sys/syslog.h")
 	flag.StringVar(&cfg.SyslogMessage, "syslog-message", "%%SEC-6-IPACCESSLOGP: list in110 denied tcp 10.99.99.1(63923) -> 10.98.98.1(1521), 1 packet", "Syslog Message")
@@ -40,6 +45,14 @@ func main() {
 	}
 	if cfg.TrapVarbinds == nil {
 		cfg.TrapVarbinds = append(cfg.TrapVarbinds, ".1.3.6.1.6.3.1.1.5.1::ABC")
+	}
+	if cfg.TrapVersion == "v3" {
+		if len(cfg.TrapPrivPassphrase) < 8 {
+			log.Fatalln("SNMPv3 Privacy Passphrase must have at least 8 characters")
+		}
+		if len(cfg.TrapAuthPassphrase) < 8 {
+			log.Fatalln("SNMPv3 Authentication Passphrase must have at least 8 characters")
+		}
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
